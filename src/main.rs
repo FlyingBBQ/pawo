@@ -13,9 +13,9 @@ struct Game {
     // This ensures that the window esists for as long as the surface does.
     window: Option<Arc<winit::window::Window>>,
     surface: Option<wgpu::Surface<'static>>,
-    // device: wgpu::Device,
-    // queue: wgpu::Queue,
-    // config: wgpu::SurfaceConfiguration,
+    device: Option<wgpu::Device>,
+    queue: Option<wgpu::Queue>,
+    config: Option<wgpu::SurfaceConfiguration>,
     size: winit::dpi::PhysicalSize<u32>,
 }
 
@@ -59,6 +59,11 @@ impl ApplicationHandler for Game {
             WindowEvent::RedrawRequested => {
                 // self.window.as_ref().unwrap().request_redraw();
             }
+            WindowEvent::Resized(physical_size) => {
+                self.resize(physical_size);
+            }
+
+            // Catch all other unimplemented states.
             _ => {
                 println!("oeps");
             }
@@ -100,6 +105,7 @@ impl Game {
             .as_ref()
             .expect("no surface")
             .get_capabilities(&adapter);
+
         // Assume we use sRGB format for shaders.
         let swapchain_format = swapchain_capabilities
             .formats
@@ -120,6 +126,22 @@ impl Game {
             .as_ref()
             .expect("no surface")
             .configure(&device, &config);
+
+        self.config = Some(config.clone());
+        self.device = Some(device);
+        self.queue = Some(queue);
+    }
+
+    pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
+        if new_size.width > 0 && new_size.height > 0 {
+            self.size = new_size;
+            self.config.as_mut().expect("no config").width = new_size.width;
+            self.config.as_mut().expect("no config").height = new_size.height;
+            self.surface.as_ref().expect("no surface").configure(
+                &self.device.as_ref().expect("no device"),
+                &self.config.as_ref().expect("no device"),
+            );
+        }
     }
 }
 
